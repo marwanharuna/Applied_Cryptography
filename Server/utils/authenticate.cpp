@@ -89,7 +89,7 @@ cout<<"\n\n\n\nCloud begining to sign !!!!!!!!!!\n\n\n";
 	  int NONCE_LEN1 = 16;
 	//unsigned char client_nounce[16];
 	  unsigned char* cloud_nonce =  new unsigned char[NONCE_LEN1];
-	int rc = RAND_bytes(cloud_nonce, sizeof(cloud_nonce));
+	int rc = RAND_bytes(cloud_nonce, NONCE_LEN1);
 	long int cloud_nounce_size= sizeof(cloud_nonce);
 	unsigned long err = ERR_get_error();
 	if(rc != 1)
@@ -98,11 +98,13 @@ cout<<"\n\n\n\nCloud begining to sign !!!!!!!!!!\n\n\n";
 	}
     
     //Get Client Nonce
-    unsigned char* client_Nonce = new unsigned char[client_nounce_size];
-    memcpy(client_Nonce, client_Nonce1, client_nounce_size);
+    char client_Nonce3[client_nounce_size];
+    //memset(client_Nonce3, 0, client_nounce_size);
+    memcpy(client_Nonce3, client_Nonce1, client_nounce_size);
+    //client_Nonce3[client_nounce_size] = '\0';
 
     cout<<"\n Client nonce in sign:"<<endl;
-   BIO_dump_fp (stdout, (const char *)client_Nonce, client_nounce_size);
+   BIO_dump_fp (stdout, (unsigned char *)client_Nonce3, client_nounce_size);
 
    // read my private key file from keyboard:
    string prvkey_file_name = "Cprvkey.pem";
@@ -134,26 +136,46 @@ cout<<"\n\n\n\nCloud begining to sign !!!!!!!!!!\n\n\n";
    fseek(clear_file, 0, SEEK_SET);
 
    // read the plaintext from file:
-   unsigned char* clear_buf = new unsigned char[clear_size + client_nounce_size];
-   memset(clear_buf, 0, clear_size + client_nounce_size);
+   char clear_buf[clear_size];
+   memset(clear_buf, 0, clear_size );
    if(!clear_buf) { cerr << "Error: malloc returned NULL (file too big?)\n"; exit(1); }
    ret = fread(clear_buf, 1, clear_size, clear_file);
    if(ret < clear_size ) { cerr << "Error while reading file 1'" << clear_file_name << "'\n"; exit(1); }
    fclose(clear_file);
    
  
-   unsigned char* CDHpublic_buffer = new unsigned char[clear_size];
+   char CDHpublic_buffer [clear_size + client_nounce_size] ;
+      
+   // Concatenate half key with nonce
+   memset(&CDHpublic_buffer, 0, clear_size + client_nounce_size);
+   strncpy(CDHpublic_buffer, client_Nonce3, client_nounce_size);
+   strncat(CDHpublic_buffer,clear_buf,clear_size);
+   memcpy(CDHpublic_buffer, clear_buf, clear_size);
+   memcpy(CDHpublic_buffer + clear_size, client_Nonce3, client_nounce_size);
+   //CDHpublic_buffer[clear_size+client_nounce_size] = '\0';
    
-    //Concatenate half key with nonce
-    memcpy(clear_buf, client_Nonce, client_nounce_size);
-    memcpy(CDHpublic_buffer + client_nounce_size, clear_buf, clear_size);
+   //unsigned char* CDHpublic_buffer = new unsigned char[clear_size + client_nounce_size+1];
+   long int sizea = clear_size + client_nounce_size;
+   CDHpublic_buffer[sizea] = '\0';
+   //memcpy(CDHpublic_buffer, CDHpublic_buffer1,(sizea-8));
+   //CDHpublic_buffer[sizea];
+   //delete[] CDHpublic_buffer1;
+  //CDHpublic_buffer1 = CDHpublic_buffer;
+   cout << "\n Nonce buffer" << endl;
+   BIO_dump_fp(stdout, (unsigned char *)client_Nonce3, client_nounce_size);
 
-    delete[] client_Nonce, client_Nonce1;
-   unsigned int c_size = clear_size+client_nounce_size;
-   cout<<"\n Concatenated buffer"<<endl;
-   BIO_dump_fp (stdout, (const char *)clear_buf, c_size);
+   //delete[] client_Nonce3;
+  // delete[] client_Nonce1;  // Also, consider why you're deleting this. Was it dynamically allocated outside the function?
+
+   cout << "\n Clearbuf buffer" << endl;
+   BIO_dump_fp(stdout, (const char*)clear_buf, clear_size);
+
+   unsigned int c_size = clear_size + client_nounce_size;
+   cout << "\n Concatenated buffer" << endl;
+   BIO_dump_fp(stdout, (const char *)CDHpublic_buffer, c_size);
+
+
    
-    
    // declare some useful variables:
    const EVP_MD* md = EVP_sha256();
 
@@ -205,14 +227,71 @@ cout<<"\n\n\n\nCloud begining to sign !!!!!!!!!!\n\n\n";
     // Get the size of cert
     BIO* mbio = BIO_new(BIO_s_mem());
     PEM_write_bio_X509(mbio,cert);
-   char* cert_buffer = NULL;
+   unsigned char* cert_buffer = NULL;
    long cert_size = BIO_get_mem_data(mbio, &cert_buffer);
    uint16_t lmsg = htons(cert_size);
 
-   // cout<<"\n Cloud Cert is:"<<endl;
-   //  BIO_dump_fp (stdout, (char* )cert_buffer, cert_size);
+   //  cout<<"\n Cloud Cert is:"<<endl;
+   // BIO_dump_fp (stdout, (char* )cert, sizeof(cert));
 
+// Print the certificate details
+    BIO* outbio = BIO_new_fp(stdout, BIO_NOCLOSE);
+    if(!outbio) { cerr << "Error: Unable to create BIO for stdout\n"; exit(1); }
+
+    X509_print_ex(outbio, cert, XN_FLAG_COMPAT, X509_FLAG_NO_EXTENSIONS);
+
+     X509* cert1;
+    BIO* mbio1 = BIO_new(BIO_s_mem());
+    BIO_write(mbio1,cert_buffer,cert_size);
+    cert1 = PEM_read_bio_X509(mbio1,NULL,NULL,NULL);
+
+   //  cout<<"\n Cloud Cert is 2:"<<endl;
+   //  cout << cert1 << endl;
+
+
+/*
+
+
+   string cert_file_name = "Cloud_cert.pem";
+    cout << "Cloud Please, type the PEM file containing Client peer's certificate: ";
+    // getline(cin, cert_file_name);
+    // if(!cin) { cerr << "Error during input\n"; exit(1); }
+    FILE* cert_file = fopen(("./Server/publickeys/" + cert_file_name).c_str(), "r");
+    if(!cert_file) { cerr << "Error: cannot open file '" << cert_file_name << "' (missing?)\n"; exit(1); }
     
+    X509* cert = PEM_read_X509(cert_file, NULL, NULL, NULL);
+    fclose(cert_file);
+    if(!cert) { cerr << "Error: PEM_read_X509 returned NULL\n"; exit(1); }
+
+    // Get the size of cert
+    BIO* mbio = BIO_new(BIO_s_mem());
+    PEM_write_bio_X509(mbio, cert);
+    char* cert_buffer = NULL;
+    long cert_size = BIO_get_mem_data(mbio, &cert_buffer);
+    
+    uint16_t lmsg = htons(cert_size);
+
+    cout << "\nCloud Cert is:\n";
+    cout << cert_buffer << endl; // PEM is ASCII, so can directly print
+
+    // Clean up resources
+    X509_free(cert);
+    BIO_free(mbio);
+
+    X509* cert1;
+    BIO* mbio1 = BIO_new(BIO_s_mem());
+    BIO_write(mbio1,cert_buffer,cert_size);
+    cert1 = PEM_read_bio_X509(mbio1,NULL,NULL,NULL);
+
+    cout<<"\n Cloud Cert is 2:"<<endl;
+    cout << cert1 << endl;
+    
+// Clean up resources
+    X509_free(cert1);
+    BIO_free(mbio1);
+
+
+*/
    // Cloud Certificate sent to client
     send(sock, (void*)&lmsg, sizeof(uint16_t), 0);
     send(sock, cert_buffer, cert_size, 0);

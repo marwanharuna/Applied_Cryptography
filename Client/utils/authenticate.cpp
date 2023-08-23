@@ -286,7 +286,7 @@ int signclient(int sock) {
 }
 
 
-int cloudverify(int sock, unsigned char* server_cert, long server_cert_size, unsigned char* cloud_half_key, unsigned int Chalfkey_size) {
+int cloudverify(int sock, unsigned char* server_cert, long server_cert_size, unsigned char* cloud_half_key, unsigned int Chalfkey_size, unsigned char* CDH_sgn, unsigned int CDH_sgn_size) {
 	cout<<"\n\n\n\nCloud begining to verify !!!!!!!!!!\n\n\n";
 	
 	
@@ -333,12 +333,24 @@ int cloudverify(int sock, unsigned char* server_cert, long server_cert_size, uns
 //    FILE* cert_file = fopen(("publickeys/"+cert_file_name).c_str(), "r");
 //    if(!cert_file){ cerr << "Error: cannot open file '" << cert_file_name << "' (missing?)\n"; exit(1); }
 
+    //  cout<<"\n Cloud Cert is:"<<endl;
+    //  BIO_dump_fp (stdout, (char* )server_cert, server_cert_size);
     X509* cert;
     BIO* mbio = BIO_new(BIO_s_mem());
     BIO_write(mbio,server_cert,server_cert_size);
     cert = PEM_read_bio_X509(mbio,NULL,NULL,NULL);
+    // const unsigned char *temp_cert_ptr = server_cert;
+    // cert = d2i_X509(NULL, &temp_cert_ptr, server_cert_size);
+
    //fclose(cert_file);
-   if(!cert){ cerr << "Error: PEM_read_X509 returned NULL\n"; exit(1); }
+   //if(!cert){ cerr << "Error: PEM_read_X509 returned NULL\n"; exit(1); }
+
+//    cout<<"\n Cloud Cert is:"<<endl;
+//     // Print the certificate details
+//     BIO* outbio = BIO_new_fp(stdout, BIO_NOCLOSE);
+//     if(!outbio) { cerr << "Error: Unable to create BIO for stdout\n"; exit(1); }
+
+   // X509_print_ex(outbio, cert, XN_FLAG_COMPAT, X509_FLAG_NO_EXTENSIONS);
    
    // verify the certificate:
    X509_STORE_CTX* certvfy_ctx = X509_STORE_CTX_new();
@@ -346,7 +358,26 @@ int cloudverify(int sock, unsigned char* server_cert, long server_cert_size, uns
    ret = X509_STORE_CTX_init(certvfy_ctx, store, cert, NULL);
    if(ret != 1) { cerr << "Error: X509_STORE_CTX_init returned " << ret << "\n" << ERR_error_string(ERR_get_error(), NULL) << "\n"; exit(1); }
    ret = X509_verify_cert(certvfy_ctx);
-   if(ret != 1) { cerr << "Error: X509_verify_cert returned " << ret << "\n" << ERR_error_string(ERR_get_error(), NULL) << "\n"; exit(1); }
+   //if(ret != 1) { cerr << "Error: X509_verify_cert returned " << ret << "\n" << ERR_error_string(ERR_get_error(), NULL) << "\n"; exit(1); }
+
+    if(ret != 1) {
+    cerr << "Error: X509_verify_cert returned " << ret << "\n";
+    
+    int err = X509_STORE_CTX_get_error(certvfy_ctx);
+    const char* err_str = X509_verify_cert_error_string(err);
+    
+    cerr << "Detailed error: " << err_str << "\n";
+
+    // Also print out the offending certificate if any
+    X509* offending_cert = X509_STORE_CTX_get_current_cert(certvfy_ctx);
+    if(offending_cert) {
+        cerr << "Offending certificate:\n";
+        //X509_print_ex(outbio, offending_cert, XN_FLAG_COMPAT, X509_FLAG_NO_EXTENSIONS);
+    }
+
+    exit(1);
+    }
+
 
    // print the successful verification to screen:
    char* tmp = X509_NAME_oneline(X509_get_subject_name(cert), NULL, 0);
@@ -355,53 +386,60 @@ int cloudverify(int sock, unsigned char* server_cert, long server_cert_size, uns
    free(tmp);
    free(tmp2);
 
-   // load the signature file:
-   string sgnt_file_name;
-   cout << "Client Please, type the Cloud signature file: ";
-   getline(cin, sgnt_file_name);
-   if(!cin) { cerr << "Error during input\n"; exit(1); }
-   FILE* sgnt_file = fopen(("local/Cloud_DHkeys/"+sgnt_file_name).c_str(), "rb");
-   if(!sgnt_file) { cerr << "Error: cannot open file '" << sgnt_file_name << "' (file does not exist?)\n"; exit(1); }
+//    // load the signature file:
+//    string sgnt_file_name = "";
+//    cout << "Client Please, type the Cloud signature file: ";
+//    getline(cin, sgnt_file_name);
+//    if(!cin) { cerr << "Error during input\n"; exit(1); }
+//    FILE* sgnt_file = fopen(("local/Cloud_DHkeys/"+sgnt_file_name).c_str(), "rb");
+//    if(!sgnt_file) { cerr << "Error: cannot open file '" << sgnt_file_name << "' (file does not exist?)\n"; exit(1); }
 
-   // get the file size: 
-   // (assuming no failures in fseek() and ftell())
-   fseek(sgnt_file, 0, SEEK_END);
-   long int sgnt_size = ftell(sgnt_file);
-   fseek(sgnt_file, 0, SEEK_SET);
+//    // get the file size: 
+//    // (assuming no failures in fseek() and ftell())
+//    fseek(sgnt_file, 0, SEEK_END);
+//    long int sgnt_size = ftell(sgnt_file);
+//    fseek(sgnt_file, 0, SEEK_SET);
 
-   // read the signature from file:
-   unsigned char* sgnt_buf = (unsigned char*)malloc(sgnt_size);
-   if(!sgnt_buf) { cerr << "Error: malloc returned NULL (file too big?)\n"; exit(1); }
-   ret = fread(sgnt_buf, 1, sgnt_size, sgnt_file);
-   if(ret < sgnt_size) { cerr << "Error while reading file '" << sgnt_file_name << "'\n"; exit(1); }
-   fclose(sgnt_file);
-    BIO_dump_fp (stdout, (const char *)sgnt_buf, sizeof(sgnt_buf));
+//    // read the signature from file:
+//    unsigned char* sgnt_buf = (unsigned char*)malloc(sgnt_size);
+//    if(!sgnt_buf) { cerr << "Error: malloc returned NULL (file too big?)\n"; exit(1); }
+//    ret = fread(sgnt_buf, 1, sgnt_size, sgnt_file);
+//    if(ret < sgnt_size) { cerr << "Error while reading file '" << sgnt_file_name << "'\n"; exit(1); }
+//    fclose(sgnt_file);
+//     BIO_dump_fp (stdout, (const char *)sgnt_buf, sizeof(sgnt_buf));
    // declare some useful variables:
-   const EVP_MD* md = EVP_sha256();
-   // read the file to verify from keyboard:
-   string clear_file_name;
-   cout << "Client Please, type the Cloud file to verify: ";
-   getline(cin, clear_file_name);
-   if(!cin) { cerr << "Error during input\n"; exit(1); }
 
-   // open the file to verify:
-   FILE* clear_file = fopen(("local/Cloud_DHkeys/"+clear_file_name).c_str(), "rb");
-   if(!clear_file) { cerr << "Error: cannot open file '" << clear_file_name << "' (file does not exist?)\n"; exit(1); }
+//    // read the file to verify from keyboard:
+//    string clear_file_name;
+//    cout << "Client Please, type the Cloud file to verify: ";
+//    getline(cin, clear_file_name);
+//    if(!cin) { cerr << "Error during input\n"; exit(1); }
 
-   // get the file size: 
-   // (assuming no failures in fseek() and ftell())
-   fseek(clear_file, 0, SEEK_END);
-   long int clear_size = ftell(clear_file);
-   fseek(clear_file, 0, SEEK_SET);
+//    // open the file to verify:
+//    FILE* clear_file = fopen(("local/Cloud_DHkeys/"+clear_file_name).c_str(), "rb");
+//    if(!clear_file) { cerr << "Error: cannot open file '" << clear_file_name << "' (file does not exist?)\n"; exit(1); }
 
-   // read the plaintext from file:
-   unsigned char* clear_buf = (unsigned char*)malloc(clear_size);
-   if(!clear_buf) { cerr << "Error: malloc returned NULL (file too big?)\n"; exit(1); }
-   ret = fread(clear_buf, 1, clear_size, clear_file);
-   if(ret < clear_size) { cerr << "Error while reading file '" << clear_file_name << "'\n"; exit(1); }
-   fclose(clear_file);
-    BIO_dump_fp (stdout, (const char *)sgnt_buf, sizeof(sgnt_buf));
+//    // get the file size: 
+//    // (assuming no failures in fseek() and ftell())
+//    fseek(clear_file, 0, SEEK_END);
+//    long int clear_size = ftell(clear_file);
+//    fseek(clear_file, 0, SEEK_SET);
+
+//    // read the plaintext from file:
+//    unsigned char* clear_buf = (unsigned char*)malloc(clear_size);
+//    if(!clear_buf) { cerr << "Error: malloc returned NULL (file too big?)\n"; exit(1); }
+//    ret = fread(clear_buf, 1, clear_size, clear_file);
+//    if(ret < clear_size) { cerr << "Error while reading file '" << clear_file_name << "'\n"; exit(1); }
+//    fclose(clear_file);
+//     BIO_dump_fp (stdout, (const char *)sgnt_buf, sizeof(sgnt_buf));
+   
+    // cout<<"\n"
+    // BIO_dump_fp (stdout, (unsigned char *)cloud_half_key, Chalfkey_size);
+    cout<<"\nSigned buffer"<<endl;
+    BIO_dump_fp (stdout, (unsigned char *)CDH_sgn, CDH_sgn_size);
+
    // create the signature context:
+    const EVP_MD* md = EVP_sha256();
    EVP_MD_CTX* md_ctx = EVP_MD_CTX_new();
    if(!md_ctx){ cerr << "Error: EVP_MD_CTX_new returned NULL\n"; exit(1); }
 
@@ -410,9 +448,9 @@ int cloudverify(int sock, unsigned char* server_cert, long server_cert_size, uns
    // assuming that the plaintext is not huge)
    ret = EVP_VerifyInit(md_ctx, md);
    if(ret == 0){ cerr << "Error: EVP_VerifyInit returned " << ret << "\n"; exit(1); }
-   ret = EVP_VerifyUpdate(md_ctx, clear_buf, clear_size);  
+   ret = EVP_VerifyUpdate(md_ctx, cloud_half_key, Chalfkey_size);  
    if(ret == 0){ cerr << "Error: EVP_VerifyUpdate returned " << ret << "\n"; exit(1); }
-   ret = EVP_VerifyFinal(md_ctx, sgnt_buf, sgnt_size, X509_get_pubkey(cert));
+   ret = EVP_VerifyFinal(md_ctx, CDH_sgn, CDH_sgn_size, X509_get_pubkey(cert));
    if(ret == -1){ // it is 0 if invalid signature, -1 if some other error, 1 if success.
       cerr << "Error: EVP_VerifyFinal returned " << ret << " (invalid signature?)\n";
       exit(1);
@@ -431,8 +469,8 @@ int cloudverify(int sock, unsigned char* server_cert, long server_cert_size, uns
    //X509_free(cacert); // already deallocated by X509_STORE_free()
    //X509_CRL_free(crl); // already deallocated by X509_STORE_free()
    X509_STORE_CTX_free(certvfy_ctx);
-   free(clear_buf);
-   free(sgnt_buf);
+   free(cloud_half_key);
+   free(CDH_sgn);
 
    return 0;
 }
@@ -455,7 +493,7 @@ int len_user = username.length();
 	//unsigned char client_nounce[16];
 	  unsigned char* client_nonce =  new unsigned char[NONCE_LEN];
 	int rc = RAND_bytes(client_nonce, NONCE_LEN);
-	long int client_nonce_size= sizeof(client_nonce);
+	long int client_nonce_size= NONCE_LEN;
 	
 	  
 	unsigned long err = ERR_get_error();
@@ -505,8 +543,6 @@ int len_user = username.length();
         perror("\nError receiving the cert\n");
         exit(-1);
     }
-
-    cout<<"\n After Certificate"<<endl;
 
     //Receive cloud buffer sizes
     long int CDH_clear_size, Cloud_Nonce_size;
@@ -567,8 +603,10 @@ int len_user = username.length();
     //Concatenate the Cloud half key and the cloud nonce
     unsigned char* cloud_half_key = new unsigned char[client_nonce_size + CDH_clear_size];
     unsigned int Chalfkey_size = client_nonce_size + CDH_clear_size;
-    memcpy(cloud_half_key, client_nonce, client_nonce_size);
-    memcpy(cloud_half_key + client_nonce_size, CDH_clear, CDH_clear_size);
+    memcpy(cloud_half_key , CDH_clear, CDH_clear_size);
+    memcpy(cloud_half_key + CDH_clear_size, client_nonce, client_nonce_size);
+
+    
    
 
     delete [] client_nonce;
@@ -579,7 +617,7 @@ int len_user = username.length();
     cout<<"\n Before verify"<<endl;
 
     //Client Veify cloud signed Public DH key
-    cloudverify(sock, pubkey_buf, pubkey_size, cloud_half_key, Chalfkey_size);
+    cloudverify(sock, pubkey_buf, pubkey_size, cloud_half_key, Chalfkey_size, CDH_sgn, CDH_sgn_size);
 
 /*GENERATING MY EPHEMERAL KEY*/
 /* Use built-in parameters */
