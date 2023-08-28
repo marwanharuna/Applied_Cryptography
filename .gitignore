@@ -46,3 +46,5 @@ Server/publickeys/
 # Compiled binaries
 /server
 /client
+/Server/utils/old_authenticate
+/Client/utils/old_authenticate
