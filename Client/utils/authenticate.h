@@ -2,7 +2,11 @@
 
 #ifndef AUTHENTICATE_H
 #define AUTHENTICATE_H
+#include <string>
+#include "KeyStruct.h"
 
-unsigned char authenticate(int sock);
+
+
+KEY authenticate(int sock, const std::string& username);
 
 #endif // AUTHENTICATE_H
