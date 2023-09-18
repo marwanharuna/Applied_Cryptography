@@ -41,10 +41,6 @@ void Encrypt(int sock,unsigned char* digest, string uname,unsigned char* clear_b
 
     // Calculate the total size needed for iv
     size_t total_size = size_aad1 +size_aad2 + size_aad3;
-    printf("file_size: %zu\n", size_aad1);
-    printf("counter: %zu\n", size_aad2);
-    printf("operation_type: %zu\n", size_aad3);
-    printf("total_size: %zu\n", total_size);
      
     // Allocate memory for iv
     unsigned char* aad = (unsigned char*)malloc(total_size);

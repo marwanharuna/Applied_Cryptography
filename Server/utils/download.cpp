@@ -4,7 +4,7 @@
 #define PORT 8080
 using namespace std;
 
-void client_upload(int sock,unsigned char* digest, string uname)
+void client_download(int sock,unsigned char* digest, string uname, string file)
 {
    int ret; // used for return values
 
@@ -15,19 +15,44 @@ void client_upload(int sock,unsigned char* digest, string uname)
      // Assume key is hard-coded (this is not a good thing, but it is not our focus right now)
    size_t key_len = EVP_CIPHER_key_length(cipher);
 
-   unsigned char *key = (unsigned char*)malloc(key_len);
+   unsigned char *key = (unsigned char*)malloc(key_len);;//(unsigned char *)"0123456789012345";
 
    memcpy(key, digest, key_len);
+   
+//    // read the file to encrypt from keyboard:
+//    string clear_file_name;
+//    cout << "Please, type the file to Upload: ";
+//    cin>>clear_file_name;
+//    //const char* clear_file_name = clear_file_name1.c_str();
+//     cout<<"\n Inside client upload"<<endl;
+//    // open the file to encrypt:
+// //    FILE* clear_file = fopen(clear_file_name.c_str(), "rb");
+//     // open the file to encrypt:
+//    FILE* clear_file = fopen(("./Client/local/"+uname+"/Upload/"+clear_file_name).c_str(), "rb");
+//    if(!clear_file) { cerr << "Error: cannot open file '" << clear_file_name << "' (file does not exist?)\n"; exit(1); }
 
-std::string clear_file_name;
+//    // get the file size: 
+//    // (assuming no failures in fseek() and ftell())
+//    fseek(clear_file, 0, SEEK_END);
+//    size_t clear_size = ftell(clear_file);
+//    fseek(clear_file, 0, SEEK_SET);
 
-    std::cout << "Please, type the file to Upload: ";
-    std::cin >> clear_file_name;
+//    // read the plaintext from file:
+//    unsigned char* clear_buf = (unsigned char*)malloc(clear_size);
+//    if(!clear_buf) { cerr << "Error: malloc returned NULL (file too big?)\n"; exit(1); }
+//    ret = fread(clear_buf, 1, clear_size, clear_file);
+//    if(ret < clear_size) { cerr << "Error while reading file '" << clear_file_name << "'\n"; exit(1); }
+//    fclose(clear_file);
 
-    std::cout << "\n Inside client upload" << std::endl;
-    cout<<"\n Uname: "<<uname<<endl;
+std::string clear_file_name = file;
+
+    // std::cout << "Please, type the file to Upload: ";
+    // std::cin >> clear_file_name;
+
+    // std::cout << "\n Inside client upload" << std::endl;
+    // cout<<"\n Uname: "<<uname<<endl;
     // Open the file to encrypt using std::ifstream:
-    std::ifstream clear_file("./Client/local/" + uname + "/Upload/" + clear_file_name, std::ios::binary);
+    std::ifstream clear_file("./Server/storage/" + uname + "/" + clear_file_name, std::ios::binary);
     
     if (!clear_file.is_open()) {
         std::cerr << "Error: cannot open file '" << clear_file_name << "' (file does not exist?)\n";
@@ -39,11 +64,6 @@ std::string clear_file_name;
     size_t clear_size = clear_file.tellg();
     clear_file.seekg(0, std::ios::beg);
 
-    if(clear_size >= 4ull*(3*1024))
-    {
-        std::cout<<"\n File to large to be uploaded !!!"<<endl;
-        exit(1);
-    }
     // Read the plaintext from file:
     unsigned char* clear_buf = new unsigned char[clear_size];
     if (!clear_buf) {
@@ -74,6 +94,10 @@ std::string clear_file_name;
 
     // Calculate the total size needed for iv
     size_t total_size = size_file_size +size_counter + size_operation_type;
+    // printf("file_size: %zu\n", size_file_size);
+    // printf("counter: %zu\n", size_counter);
+    // printf("operation_type: %zu\n", size_operation_type);
+    //  printf("total_size: %zu\n", total_size);
      
     // Allocate memory for iv
     unsigned char* aad = (unsigned char*)malloc(total_size);
@@ -104,6 +128,13 @@ std::string clear_file_name;
     offset += size_counter;
     memcpy(aad + offset, &operation_type, size_operation_type);
 
+    // // Read and print the contents of the iv buffer
+    // printf("Contents of iv: ");
+    // for (size_t i = 0; i < total_size; i++) {
+    //     printf("%02x ", aad[i]);
+    // }
+    // printf("\n");
+   
    // check for possible integer overflow in (clear_size + block_size) --> PADDING!
    // (possible if the plaintext is too big, assume non-negative clear_size and block_size):
    if(clear_size > UINT_MAX - block_size) { cerr <<"Error: integer overflow (file too big?)\n"; exit(1); }

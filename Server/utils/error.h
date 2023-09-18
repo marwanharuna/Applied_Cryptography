@@ -4,5 +4,6 @@
 #include <string>
 
 int handleErrors(std::string data);
+bool isInputValid(const std::string& input);
 
 #endif // ERROR_H

@@ -2,6 +2,7 @@
 #include "utils/authenticate.h"
 #include "utils/login.h"
 #include "utils/upload.h"
+#include "utils/download.h"
 
 #define PORT 8080
 
@@ -59,11 +60,11 @@ int main(int argc, char const *argv[])
     size_t quit = 1;
     int first = 0;
     int login_status = 0;
+    size_t counter = 0;
+    size_t maxCounter = 3;
     while(quit == 1)
     {
 
-            int counter = 0;
-            int maxCounter = 10;
             //declare the struct for session key
             KEY sessionkey;
 
@@ -105,7 +106,7 @@ int main(int argc, char const *argv[])
 
                 // read the file to encrypt from keyboard:
                 std::string clear_file_name1 = username + "pass.dec";
-                // cout << "Please, type the file to encrypt: ";
+                // std::cout << "Please, type the file to encrypt: ";
                 // getline(cin, clear_file_name1);
                 // if(!cin) { cerr << "Error during input\n"; exit(1); }
 
@@ -126,7 +127,7 @@ int main(int argc, char const *argv[])
                 fclose(clear_file1);
 
 
-                cout<<"clear_buf2:"<<endl;
+                std::cout<<"clear_buf2:"<<endl;
                 BIO_dump_fp (stdout, (const char *)clear_buf2, clear_size2);
 
                 // unsigned char *clear_buf3 = (unsigned char *)"0123456789012345";
@@ -135,7 +136,7 @@ int main(int argc, char const *argv[])
 
                 if (memcmp(clear_buf1, clear_buf2, clear_size1) == 0) 
                 {
-                        cout << "The original and decrypted values match!" << endl;
+                        std::cout << "The original and decrypted values match!" << endl;
 
                         size_t operation_type= 0;
                         size_t flag1=1;
@@ -164,7 +165,7 @@ int main(int argc, char const *argv[])
                     login_status = 1;    
                 }
                 else{
-                    cout<<"\n Login Failed!!!"<<endl;
+                    std::cout<<"\n Login Failed!!!"<<endl;
 
 
                         size_t operation_type= 0;
@@ -195,102 +196,332 @@ int main(int argc, char const *argv[])
 
             }
 
-
-            cout<<"\nLogin successfull!!!!";
+system("clear");
+            std::cout<<"\nLogin successfull!!!!";
 
 			size_t opt;
-			cout<<"\n Welcoome To Your Dashboard "<<username;
-			cout<<"\n\n\n";
-			cout<<"\n Select The Operation To Perform\n";
-			cout<<"\n 1. Upload A File";
-			cout<<"\n 2. Download A File";
-			cout<<"\n 3. Search All Files";
-			cout<<"\n 4. Delete A File";
-			cout<<"\n 5. Rename A File";
-			//cout<<"\n Input:";
-			ssize_t bytesRead = read(new_socket,&opt, sizeof(size_t));
-            if (bytesRead == -1) 
-            {
-                // Handle the read error here
-                perror("read");
-            } else if (bytesRead == 0) {
-                quit = 0;
-            }
+			std::cout<<"\n Welcoome To Your Dashboard "<<username;
+			std::cout<<"\n\n\n";
+			std::cout<<"\n Select The Operation To Perform\n";
+			std::cout<<"\n 1. Upload A File";
+			std::cout<<"\n 2. Download A File";
+			std::cout<<"\n 3. Search All Files";
+			std::cout<<"\n 4. Delete A File";
+			std::cout<<"\n 5. Rename A File";
+            std::cout<<"\n 6. Logout"<<endl;
+			//std::cout<<"\n Input:";
+
+             unsigned char* clear_buf1_m3;
+           
+
+            size_t aad1_m3, aad2_m3, aad3_m3, clear_size1_m3;
+
+            Decrypt(new_socket,sessionkey.key,username,&clear_buf1_m3,&clear_size1_m3,&aad1_m3, &aad2_m3, &aad3_m3);
+
+
+            opt=aad3_m3;
+
+
+			// ssize_t bytesRead = read(new_socket,&opt, sizeof(size_t));
+            // if (bytesRead == -1) 
+            // {
+            //     // Handle the read error here
+            //     perror("read");
+            // } else if (bytesRead == 0) {
+            //     quit = 0;
+            // }
 			if(opt == 1)
 			{
-				cout<<"\nUpload begin";
+				std::cout<<"\nUpload begin";
 				cloud_upload(new_socket, sessionkey.key, username);
-				
+				counter++;
 			}
 			else if(opt == 2)
 			{	
-				cout<<"\nDownload begin";
+				std::cout<<"\nDownload begin";
+
+                size_t status;
+
+                   unsigned char* clear_buf1_m6;
+                    size_t clear_size1_m6;
+
+                    size_t aad1_m6, aad2_m6, aad3_m6;
+
+                    Decrypt(new_socket,sessionkey.key,username,&clear_buf1_m6,&clear_size1_m6,&aad1_m6, &aad2_m6, &aad3_m6);
+
+
+                    // BIO_dump_fp (stdout, (const char *)clear_buf1_m6, clear_size1_m6);
+
+                    std::string file2(reinterpret_cast<char*>(clear_buf1_m6), clear_size1_m6);
+                    std::cout<<"\n File name after decrypting and casting to string: "<<file2<<endl;
+
+                    client_download(new_socket, sessionkey.key, username, file2);
+                    counter++;
 			}
 			else if(opt == 3)
 			{
-				cout<<"\nSearching all files";
-
-				/*DIR *dr;
+				std::cout<<"\nSearching all files";
+                DIR *dr;
 				struct dirent *en;
-				dr = opendir(("./storage/"+uname+"/").c_str());
+				dr = opendir(("./Server/storage/"+username+"/").c_str());
+				string file_list1;
+				string file_list;
+				string file_list2;
+				int count;
+				int i=0;
+				
 				if(dr)
 				{
+				
+			
 					while((en = readdir(dr)) != NULL)
 					{
-						cout<<"\n"<<en->d_name;
+						std::cout<<"\n"<<en->d_name;
+						file_list = en->d_name;
+						file_list2.append(file_list).append("\n");
+						
+						
+						
 					}
+					std::cout<<file_list2<<endl;
 					closedir(dr);
-				}*/
+					
+					
+				}
 		
+                                  
+                    size_t file_len = file_list2.length();
+                    char* file = (char*)malloc(file_len);
+                    strcpy(file, file_list2.c_str());
+
+                    size_t clear_size_m4 = file_len;
+                   
+
+                    // read the plaintext from file:
+                    unsigned char* clear_buf_m4 = (unsigned char*)malloc(clear_size_m4);
+                    if(!clear_buf_m4) { cerr << "Error: malloc returned NULL (file too big?)\n"; exit(1); }
+                    memcpy(clear_buf_m4, file, clear_size_m4);
+
+                    size_t file_size_client=100;
+                    size_t counter_client= 0;
+                    size_t operation_type_client=0;
+
+                    Encrypt(new_socket,sessionkey.key,username,clear_buf_m4,clear_size_m4,counter_client,operation_type_client,file_size_client);
+
+                    free(clear_buf_m4);
+                    counter++;
 			}
 			else if(opt == 4)
 			{
-				cout<<"\nDelete a files";
-				/*int status;
-				string file_to_delete;
-				cout<<"\n Enter The file to delete:";
-				cin>>file_to_delete;
-				status = remove(("./storage/"+uname+"/"+file_to_delete).c_str());
-				if(status == 0)
-				{
-					cout<<"\n File deleted Successfully!";
-				}
-				else
-				{
-					cout<<"\n Error Deleting File!";
-				}*/
+				std::cout<<"\nDelete a files";
+					size_t status;
 
-				
+                   unsigned char* clear_buf1_m6;
+                    size_t clear_size1_m6;
+
+                    size_t aad1_m6, aad2_m6, aad3_m6;
+
+                    Decrypt(new_socket,sessionkey.key,username,&clear_buf1_m6,&clear_size1_m6,&aad1_m6, &aad2_m6, &aad3_m6);
+
+
+                    // BIO_dump_fp (stdout, (const char *)clear_buf1_m6, clear_size1_m6);
+
+                    std::string file2(reinterpret_cast<char*>(clear_buf1_m6), clear_size1_m6);
+                    std::cout<<"\n File name after decrypting and casting to string: "<<file2<<endl;
+
+                    status = remove(("./Server/storage/"+username+"/"+file2).c_str());
+
+                    	if(status == 0)
+                        {
+
+                            size_t operation_type= 0;
+
+                            size_t del_value_len=12;
+                            size_t counter_server1=1;
+                            // Allocate memory for iv
+                            unsigned char* del_value = (unsigned char*)malloc(del_value_len);
+
+                            if (del_value == NULL) {
+                                perror("Memory allocation failed");
+                                //return 1;
+                            }
+
+                            RAND_poll();
+                            // Generate 16 bytes at random. That is my IV
+                            int ret = RAND_bytes((unsigned char*)&del_value[0],del_value_len);
+                            if(ret!=1){
+                                cerr <<"Error: RAND_bytes Failed\n";
+                                exit(1);
+                              } 
+
+
+
+                            Encrypt(new_socket,sessionkey.key,username,del_value,del_value_len,counter_server1,operation_type,status);
+
+                            std::cout<<"\n File deleted Successfully!";
+                            free(del_value);
+                        }
+                        else
+                        {
+                            std::cout<<"\n Error Deleting File!";
+
+
+                            size_t operation_type= 0;
+
+                            size_t del_value_len=12;
+                             size_t counter_server1=1;
+                            // Allocate memory for iv
+                            unsigned char* del_value = (unsigned char*)malloc(del_value_len);
+
+                            if (del_value == NULL) {
+                                perror("Memory allocation failed");
+                                //return 1;
+                            }
+
+                            RAND_poll();
+                            // Generate 16 bytes at random. That is my IV
+                            int ret = RAND_bytes((unsigned char*)&del_value[0],del_value_len);
+                            if(ret!=1){
+                                cerr <<"Error: RAND_bytes Failed\n";
+                                exit(1);
+                            } 
+
+
+
+                            Encrypt(new_socket,sessionkey.key,username,del_value,del_value_len,counter_server1,operation_type,status);
+                            free(del_value);
+                        }
+
+				counter++;
 			}
 			else if(opt == 5)
 			{
-				cout<<"\nRenaming a file";
-				/*
-				string oldfile, newfile;
-				cout<<"\n Enter file to rename:";
-				cin>>oldfile;
-				cout<<"\n Enter new name:";
-				cin>>newfile;
-				if(rename(("./storage/"+uname+"/"+oldfile).c_str(),("./storage/"+uname+"/"+newfile).c_str()) != 0)
-				perror("Error renaming file");
-				else
-				cout<<"File renamed successfully";*/
+				std::cout<<"\nRenaming a file";
+					size_t status;
+
+                   unsigned char* clear_buf1_m7;
+                    size_t clear_size1_m7;
+
+                    size_t aad1_m7, aad2_m7, aad3_m7;
+
+                    Decrypt(new_socket,sessionkey.key,username,&clear_buf1_m7,&clear_size1_m7,&aad1_m7, &aad2_m7, &aad3_m7);
+
+
+
+                    std::string file4(reinterpret_cast<char*>(clear_buf1_m7), clear_size1_m7);
+                    std::cout<<"\n File name after decrypting and casting to string: "<<file4<<endl;
+
+
+                    unsigned char* clear_buf1_m8;
+                    size_t clear_size1_m8;
+
+                    size_t aad1_m8, aad2_m8, aad3_m8;
+
+                    Decrypt(new_socket,sessionkey.key,username,&clear_buf1_m8,&clear_size1_m8,&aad1_m8, &aad2_m8, &aad3_m8);
+
+
+                    // BIO_dump_fp (stdout, (const char *)clear_buf1_m6, clear_size1_m6);
+
+                    std::string file5(reinterpret_cast<char*>(clear_buf1_m8), clear_size1_m8);
+                    std::cout<<"\n File name after decrypting and casting to string: "<<file5<<endl;
+
+                     if(rename(("./Server/storage/"+username+"/"+file4).c_str(),("./Server/storage/"+username+"/"+file5).c_str()) != 0)
+                     {
+                            perror("Error renaming file");
+
+                            size_t re_status=0;
+
+                            size_t operation_type= 0;
+
+                            size_t ren_value_len=12;
+                            size_t counter_server1=1;
+                            // Allocate memory for iv
+                            unsigned char* ren_value = (unsigned char*)malloc(ren_value_len);
+
+                            if (ren_value == NULL) {
+                                perror("Memory allocation failed");
+                                //return 1;
+                            }
+
+                            RAND_poll();
+                            // Generate 16 bytes at random. That is my IV
+                            int ret = RAND_bytes((unsigned char*)&ren_value[0],ren_value_len);
+                            if(ret!=1){
+                                cerr <<"Error: RAND_bytes Failed\n";
+                                exit(1);
+                              } 
+
+
+
+                            Encrypt(new_socket,sessionkey.key,username,ren_value,ren_value_len,counter_server1,operation_type,re_status);
+
+                            std::cout<<"\n File renamed Successfully!";
+                            free(ren_value);
+
+
+
+                     }
+                   
+                    else
+                    {
+                        std::cout<<"File renamed successfully";
+
+                            size_t re_status=1;
+
+                            size_t operation_type= 0;
+
+                            size_t ren_value_len=12;
+                            size_t counter_server1=1;
+                            // Allocate memory for iv
+                            unsigned char* ren_value = (unsigned char*)malloc(ren_value_len);
+
+                            if (ren_value == NULL) {
+                                perror("Memory allocation failed");
+                                //return 1;
+                            }
+
+                            RAND_poll();
+                            // Generate 16 bytes at random. That is my IV
+                            int ret = RAND_bytes((unsigned char*)&ren_value[0],ren_value_len);
+                            if(ret!=1){
+                                cerr <<"Error: RAND_bytes Failed\n";
+                                exit(1);
+                              } 
+
+
+
+                            Encrypt(new_socket,sessionkey.key,username,ren_value,ren_value_len,counter_server1,operation_type,re_status);
+
+                            std::cout<<"\n File renamed Successfully!";
+                            free(ren_value);
+                    }
+                   
+
+                counter++;
 			}
+            else if(opt == 6)
+                     {
+                        std::cout<<"\n Logging out in progress..."<<endl;
+                        quit = 0;
+                        freeKey(sessionkey);
+                        close(new_socket);
+                        exit(1);
+                     }
 			else
 			{
-				cout<<"Wrong Option Selected";
+				std::cout<<"Wrong Option Selected";
 			}
 
 
-			cout<<"\n\t Do Want To Perform Another Operation!!!";
-			cout<<"1. Yes \n 2. No \n Input:";
-            //cout<<"\n Quit: "<<quit<<endl;
+			std::cout<<"\n\t Do Want To Perform Another Operation!!!";
+			std::cout<<"1. Yes \n 2. No \n Input:";
+            //std::cout<<"\n Quit: "<<quit<<endl;
             //size_t quit1;
 	        read(new_socket, &quit, sizeof(size_t));
-            cout<<"\n Quit: "<<quit<<endl;
+            std::cout<<"\n Quit: "<<quit<<endl;
             if(quit != 1)
             {
-                cout<<"\n Session gracefully closed!!!"<<endl;
+                std::cout<<"\n Session gracefully closed!!!"<<endl;
                 freeKey(sessionkey);
                
             };

@@ -4,7 +4,7 @@
 using namespace std;
 
 
-void cloud_upload(int new_socket,unsigned char* digest, string uname)
+void cloud_download(int new_socket,unsigned char* digest, string uname)
 {
 	int ret; // used for return values
 	const EVP_CIPHER* cipher = EVP_aes_128_gcm();
@@ -16,13 +16,6 @@ void cloud_upload(int new_socket,unsigned char* digest, string uname)
    unsigned char *key = (unsigned char*)malloc(key_len);;//(unsigned char *)"0123456789012345";
 
    memcpy(key, digest, key_len);
-   // read the file to decrypt from keyboard:
-//    string cphr_file_name;
-   //cout << "Please, type the file to decrypt: ";
-   	//Receive IV
-	// Allocate memory for and randomly generate IV:
-   	// unsigned char* iv = (unsigned char*)malloc(iv_len);
-	// read(new_socket, iv, iv_len);
 
     //Receive add and its size
 	size_t aad_len;
@@ -41,7 +34,7 @@ void cloud_upload(int new_socket,unsigned char* digest, string uname)
    
 	string cphr_file_name;
 	cphr_file_name.assign(file_name1, file_len1);
-    // cout<<"file_name:"<<endl;
+    //cout<<"file_name:"<<endl;
 //    BIO_dump_fp (stdout, (const char *)file_name1, file_len1);
 
     size_t tag_len;
@@ -112,9 +105,9 @@ memcpy(tag_buf, final_buf + EVP_CIPHER_iv_length(cipher) + cphr_size, tag_len);
 
    unsigned char* clear_buf = (unsigned char*)malloc(cphr_size);
    if(!clear_buf) { cerr << "Error: malloc returned NULL (file too big?)\n"; exit(1); }
-   cout<<"/n this is cphr size"<<cphr_size<<endl;
+//    cout<<"/n this is cphr size"<<cphr_size<<endl;
 
-    cout<<"tag buf:"<<endl;
+//     cout<<"tag buf:"<<endl;
    //BIO_dump_fp (stdout, (const char *)tag_buf, tag_len);
 
    //Create and initialise the context
@@ -141,7 +134,7 @@ memcpy(tag_buf, final_buf + EVP_CIPHER_iv_length(cipher) + cphr_size, tag_len);
         cphr_size -= len;
         // x++;
     }
-    cout<<"/n after update"<<plaintext_len<<endl;
+   // cout<<"/n after update"<<plaintext_len<<endl;
        cout<<"/n after update"<<x<<endl;
     if(1 != EVP_DecryptUpdate(ctx, clear_buf + plaintext_len, &len, cphr_buf + plaintext_len, cphr_size)){
         perror("Errore: EVP_EncryptUpdate\n");
@@ -150,7 +143,7 @@ memcpy(tag_buf, final_buf + EVP_CIPHER_iv_length(cipher) + cphr_size, tag_len);
     plaintext_len += len;
 
    
-  cout<<"/n after update"<<plaintext_len<<endl;
+  //cout<<"/n after update"<<plaintext_len<<endl;
     /* Set expected tag value. Works in OpenSSL 1.0.1d and later */
     if(!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, 16, tag_buf))
         handleErrors("EVP_CIPHER_CTX_ctrl");
@@ -182,7 +175,7 @@ memcpy(tag_buf, final_buf + EVP_CIPHER_iv_length(cipher) + cphr_size, tag_len);
 
    // write the plaintext into a '.dec' file:
    string clear_file_name = cphr_file_name;
-   FILE* clear_file = fopen(("./Server/storage/"+uname+"/"+clear_file_name).c_str(), "wb");
+   FILE* clear_file = fopen(("./Client/local/"+uname+"/Download/"+clear_file_name).c_str(), "wb");
    if(!clear_file) { cerr << "Error: cannot open file '" << clear_file_name << "' (no permissions?)\n"; exit(1); }
    ret = fwrite(clear_buf, 1, clear_size, clear_file);
    if(ret < clear_size) { cerr << "Error while writing the file '" << clear_file_name << "'\n"; exit(1); }

@@ -369,10 +369,6 @@ len_user = username.length();
     }
 
 
-    cout<<"\n Client Nonce size:"<<client_nonce_size<<endl;
-    cout<<"\n Client Nonce is:"<<endl;
-    cout<<"\n The Username is:"<<username<<endl;
-
     //Send client nonce with the username
     unsigned char* message1 = nullptr;
     try {

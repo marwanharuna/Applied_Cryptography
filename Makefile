@@ -9,7 +9,8 @@ SERVER_SOURCES = ./Server/server.cpp \
 				 ./Server/utils/error.cpp \
                  ./Server/utils/authenticate.cpp \
 				 ./Server/utils/login.cpp \
-				 ./Server/utils/upload.cpp
+				 ./Server/utils/upload.cpp \
+				 ./Server/utils/download.cpp
 				 
                  
 
@@ -17,7 +18,8 @@ CLIENT_SOURCES = ./Client/client.cpp \
 				 ./Client/utils/error.cpp \
                  ./Client/utils/authenticate.cpp \
 				 ./Client/utils/login.cpp \
-				 ./Client/utils/upload.cpp 
+				 ./Client/utils/upload.cpp \
+				 ./Client/utils/download.cpp
 				 
                 
 

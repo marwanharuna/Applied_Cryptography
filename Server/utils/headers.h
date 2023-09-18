@@ -23,5 +23,6 @@
 #include <dirent.h>
 #include <cstdlib>
 #include <fstream>
+#include <cctype>
 
 #endif // HEADERS_H

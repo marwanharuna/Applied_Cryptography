@@ -41,8 +41,8 @@ void Decrypt(int new_socket,unsigned char* digest, string uname,unsigned char** 
     //  int chunk_size = 1024; // Adjust this to match the client's chunk size
 
     read(new_socket, final_buf, final_size);
-  cout<<"aad_len: "<<aad_len<<"\n tag_len: "<<tag_len<<endl;
-cout<<"\n Inside decrypt !!!"<<endl;
+//   cout<<"aad_len: "<<aad_len<<"\n tag_len: "<<tag_len<<endl;
+// cout<<"\n Inside decrypt !!!"<<endl;
 unsigned char* iv = (unsigned char*)malloc(EVP_CIPHER_iv_length(cipher));
 unsigned char* cphr_buf = (unsigned char*)malloc(cphr_size);
 unsigned char* tag_buf = (unsigned char*)malloc(tag_len);
@@ -55,9 +55,9 @@ memcpy(cphr_buf, final_buf + EVP_CIPHER_iv_length(cipher), cphr_size);
 
 // Extract tag_buf
 memcpy(tag_buf, final_buf + EVP_CIPHER_iv_length(cipher) + cphr_size, tag_len);
-cout<<"content of iv"<<endl;
+// cout<<"content of iv"<<endl;
 
- BIO_dump_fp (stdout, (const char *)iv, iv_len);
+//  BIO_dump_fp (stdout, (const char *)iv, iv_len);
 
 
    unsigned char* clear_buf = (unsigned char*)malloc(cphr_size);
@@ -199,10 +199,10 @@ void Encrypt(int sock,unsigned char* digest, string uname,unsigned char* clear_b
 
     // Calculate the total size needed for iv
     size_t total_size = size_aad1 +size_aad2 + size_aad3;
-    printf("file_size: %zu\n", size_aad1);
-    printf("counter: %zu\n", size_aad2);
-    printf("operation_type: %zu\n", size_aad3);
-     printf("total_size: %zu\n", total_size);
+    // printf("file_size: %zu\n", size_aad1);
+    // printf("counter: %zu\n", size_aad2);
+    // printf("operation_type: %zu\n", size_aad3);
+    //  printf("total_size: %zu\n", total_size);
      
     // Allocate memory for iv
     unsigned char* aad = (unsigned char*)malloc(total_size);
@@ -234,11 +234,11 @@ void Encrypt(int sock,unsigned char* digest, string uname,unsigned char* clear_b
     memcpy(aad + offset, &aad3, size_aad3);
 
     // Read and print the contents of the iv buffer
-    printf("Contents of iv: ");
-    for (size_t i = 0; i < total_size; i++) {
-        printf("%02x ", aad[i]);
-    }
-    printf("\n");
+    // printf("Contents of iv: ");
+    // for (size_t i = 0; i < total_size; i++) {
+    //     printf("%02x ", aad[i]);
+    // }
+    // printf("\n");
    
    // check for possible integer overflow in (clear_size + block_size) --> PADDING!
    // (possible if the plaintext is too big, assume non-negative clear_size and block_size):
@@ -252,8 +252,8 @@ void Encrypt(int sock,unsigned char* digest, string uname,unsigned char* clear_b
    size_t tag_len = 16;
    tag_buf=(unsigned char*)malloc(tag_len);
    
-    cout<<"Used IV:"<<endl;
-   BIO_dump_fp (stdout, (const char *)iv, iv_len);
+//     cout<<"Used IV:"<<endl;
+//    BIO_dump_fp (stdout, (const char *)iv, iv_len);
    
    
    //Create and initialise the context with used cipher, key and iv
